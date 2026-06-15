@@ -1,0 +1,874 @@
+/* ============================================================
+   OpenHKO — "Atmospheric Broadsheet"
+   An editorial weather bulletin with meteorological-instrument
+   precision. Light paper ground, ink type, hairline rules,
+   a soft atmospheric sky-glow, and mono instrument readouts.
+   ============================================================ */
+
+:root {
+  /* Paper & ink */
+  --paper: #f1ede3;
+  --paper-2: #e9e3d6;
+  --ink: #1b2330;
+  --ink-soft: #5b6470;
+  --ink-faint: #8b9099;
+  --rule: rgba(27, 35, 48, 0.16);
+  --rule-strong: rgba(27, 35, 48, 0.42);
+  --card: #faf8f2;
+  --card-edge: rgba(27, 35, 48, 0.1);
+
+  /* Atmosphere — a cool sky tint that washes the page */
+  --sky-hi: #cfe0e6;
+  --sky-lo: #e7d8c4;
+
+  /* Accent — observatory teal + signal amber */
+  --accent: #0e6b6b;
+  --accent-ink: #094f4f;
+  --ember: #c0531f;
+
+  /* Warning signal palette */
+  --sig-amber: #e0a200;
+  --sig-red: #c62828;
+  --sig-black: #1b2330;
+
+  /* Type */
+  --display: "Fraunces", Georgia, "Songti SC", serif;
+  --sans: "IBM Plex Sans", "IBM Plex Sans TC", "IBM Plex Sans SC",
+    system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --maxw: 1080px;
+  --radius: 4px;
+  --control-h: 2rem; /* shared height for masthead controls */
+}
+
+:lang(tc),
+:lang(zh-Hant) {
+  --sans: "IBM Plex Sans TC", "IBM Plex Sans", system-ui, sans-serif;
+}
+:lang(sc),
+:lang(zh-Hans) {
+  --sans: "IBM Plex Sans SC", "IBM Plex Sans", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--sans);
+  color: var(--ink);
+  background-color: var(--paper);
+  /* Layered atmosphere: a soft sky glow at top, warm haze at the
+     horizon, plus a faint grain via SVG noise. */
+  background-image:
+    radial-gradient(
+      120% 80% at 78% -10%,
+      rgba(207, 224, 230, 0.85) 0%,
+      rgba(207, 224, 230, 0) 55%
+    ),
+    radial-gradient(
+      90% 60% at 0% 110%,
+      rgba(231, 216, 196, 0.7) 0%,
+      rgba(231, 216, 196, 0) 60%
+    );
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Fine grain overlay for paper texture */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.4;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+a {
+  color: var(--accent-ink);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+/* ---------- Shell ---------- */
+.shell {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: clamp(1.25rem, 4vw, 3rem) clamp(1.1rem, 4vw, 2.5rem) 4rem;
+}
+
+/* ---------- Masthead ---------- */
+.masthead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 2px solid var(--ink);
+  flex-wrap: wrap;
+}
+
+.masthead__brand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.masthead__title {
+  font-family: var(--display);
+  font-optical-sizing: auto;
+  font-weight: 900;
+  font-size: clamp(2.4rem, 7vw, 4rem);
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+.masthead__title span {
+  color: var(--accent);
+}
+
+.masthead__tagline {
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.masthead__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.55rem;
+  text-align: right;
+}
+
+.masthead__date {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Dropdown controls (language / unit / theme) ---------- */
+.select {
+  position: relative;
+  display: inline-flex;
+  height: var(--control-h);
+}
+.select select {
+  appearance: none;
+  height: 100%;
+  margin: 0;
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  background: rgba(250, 248, 242, 0.6);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0 1.55rem 0 0.7rem;
+  cursor: pointer;
+  transition: border-color 0.18s ease, color 0.18s ease;
+}
+.select--mono select {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.select select:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+.select select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* Native option list — honored on platforms that allow it. */
+.select option {
+  background: var(--card);
+  color: var(--ink);
+}
+/* Custom chevron. */
+.select::after {
+  content: "";
+  position: absolute;
+  right: 0.62rem;
+  top: 50%;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-right: 1.5px solid var(--ink-soft);
+  border-bottom: 1.5px solid var(--ink-soft);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+
+/* ---------- Section scaffolding ---------- */
+.section {
+  margin-top: clamp(2rem, 5vw, 3.25rem);
+}
+
+.section__label {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 1.1rem;
+}
+.section__label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+.section__label .num {
+  font-family: var(--mono);
+  color: var(--accent);
+}
+
+/* ---------- Reveal animation ---------- */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.reveal {
+  animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+  }
+}
+
+/* ---------- Current conditions (hero) ---------- */
+.now {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: clamp(1.25rem, 4vw, 3rem);
+  align-items: stretch;
+}
+
+.now__primary {
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 3vw, 2rem);
+}
+
+.now__icon {
+  width: clamp(78px, 14vw, 124px);
+  height: clamp(78px, 14vw, 124px);
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 6px 14px rgba(27, 35, 48, 0.16));
+}
+
+.now__readout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.now__temp {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: clamp(4.2rem, 16vw, 7.5rem);
+  line-height: 0.86;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: flex-start;
+}
+.now__temp sup {
+  font-size: 0.32em;
+  font-weight: 400;
+  margin-top: 0.35em;
+  margin-left: 0.1em;
+  color: var(--ink-soft);
+}
+
+.now__condition {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: clamp(1.15rem, 3vw, 1.6rem);
+  line-height: 1.15;
+  font-style: italic;
+}
+
+.now__place {
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Instrument readouts + meter footer */
+.now__aside {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.now__instruments {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+/* Each gauge is a fixed 3-row stack — label / value / note — so the two
+   big values share a baseline and the captions bottom-align. */
+.instrument {
+  background: var(--card);
+  padding: 1rem 1.1rem;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 0.45rem;
+  min-height: 104px;
+}
+.instrument__label {
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.instrument__value {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 1.95rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  align-self: start;
+}
+.instrument__value small {
+  font-size: 0.48em;
+  color: var(--ink-soft);
+  margin-left: 0.12em;
+}
+.instrument__note {
+  font-size: 0.72rem;
+  line-height: 1;
+  color: var(--ink-soft);
+  text-transform: capitalize;
+  align-self: end;
+  min-height: 1em;
+}
+
+/* Last-updated time: a discreet footer anchored under the gauges. */
+.now__updated {
+  margin-top: auto;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+.now__updated-label {
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+.now__updated time {
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Warnings ---------- */
+.warnings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+}
+.warning {
+  border-radius: var(--radius);
+  border-left: 5px solid var(--sig-amber);
+  background: rgba(224, 162, 0, 0.1);
+  color: var(--ink);
+  overflow: hidden;
+}
+.warning--red {
+  border-left-color: var(--sig-red);
+  background: rgba(198, 40, 40, 0.1);
+}
+.warning--black {
+  border-left-color: var(--sig-black);
+  background: rgba(27, 35, 48, 0.08);
+}
+.warning__summary {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.8rem 1rem;
+  list-style: none;
+}
+.warning__summary::-webkit-details-marker {
+  display: none;
+}
+details.warning > .warning__summary {
+  cursor: pointer;
+}
+.warning__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+  animation: pulse 2s ease-in-out infinite;
+}
+.warning--red .warning__dot {
+  color: var(--sig-red);
+}
+.warning--amber .warning__dot {
+  color: var(--sig-amber);
+}
+.warning--black .warning__dot {
+  color: var(--sig-black);
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.7);
+  }
+}
+.warning__icon {
+  width: auto;
+  height: 30px;
+  flex-shrink: 0;
+  align-self: center;
+  object-fit: contain;
+  image-rendering: -webkit-optimize-contrast;
+}
+.warning__name {
+  font-weight: 600;
+  font-size: 0.92rem;
+  min-width: 0;
+}
+.warning__type {
+  font-size: 0.76rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.warning__right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-shrink: 0;
+}
+.warning__time {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.warning__chev {
+  width: 14px;
+  height: 14px;
+  color: var(--ink-soft);
+  transition: transform 0.25s ease;
+}
+details.warning[open] .warning__chev {
+  transform: rotate(180deg);
+}
+.warning__body {
+  padding: 0 1rem 0.9rem 1.95rem;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.warning__body p {
+  margin: 0;
+  white-space: pre-line;
+}
+.warning__body p + p {
+  margin-top: 0.55rem;
+}
+
+.tips {
+  margin-top: 0.75rem;
+  border: 1px solid var(--rule);
+  border-left: 5px solid var(--ember);
+  border-radius: var(--radius);
+  padding: 0.85rem 1.05rem;
+  background: var(--card);
+}
+.tips p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.tips p + p {
+  margin-top: 0.6rem;
+}
+
+/* ---------- Local forecast (editorial prose) ---------- */
+.forecast {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(1.5rem, 4vw, 3rem);
+}
+.forecast__block h3 {
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  margin: 0 0 0.6rem;
+  font-weight: 600;
+}
+.forecast__lead {
+  font-family: var(--display);
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-size: clamp(1.15rem, 2.6vw, 1.5rem);
+  line-height: 1.4;
+  margin: 0;
+}
+.forecast__period {
+  font-style: italic;
+  color: var(--accent);
+}
+.forecast__body {
+  font-size: 0.98rem;
+  line-height: 1.65;
+  margin: 0;
+}
+.forecast__body + .forecast__body {
+  margin-top: 0.85rem;
+}
+.forecast__outlook {
+  color: var(--ink-soft);
+}
+
+/* ---------- 9-day forecast ---------- */
+.ninedays {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.day {
+  background: var(--card);
+  padding: 1.05rem 0.95rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.day:hover {
+  background: #fff;
+}
+.day__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.day__week {
+  font-weight: 700;
+  font-size: 0.86rem;
+}
+.day__date {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.day__icon {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 7px rgba(27, 35, 48, 0.14));
+}
+.day__temps {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.day__hi {
+  font-weight: 600;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.day__lo {
+  font-size: 1.05rem;
+  color: var(--ink-faint);
+}
+/* hi/lo range bar */
+.day__bar {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--ember) 100%);
+  opacity: 0.55;
+}
+.day__nowtag {
+  font-family: var(--sans);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.1rem 0.4rem;
+  align-self: center;
+}
+.day__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  margin-top: auto;
+}
+.day__rh,
+.day__rain {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--mono);
+}
+.day__rhval,
+.day__psr {
+  font-weight: 600;
+  color: var(--ink);
+}
+.day__wind {
+  line-height: 1.4;
+}
+
+/* Observed "today" lead-in card */
+.day--today {
+  background: linear-gradient(
+    180deg,
+    rgba(14, 107, 107, 0.08) 0%,
+    var(--card) 60%
+  );
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.day--today .day__week {
+  color: var(--accent-ink);
+}
+
+/* ---------- States ---------- */
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  padding: 4rem 1rem;
+  text-align: center;
+}
+.state__spinner {
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--rule);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.state__title {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 1.2rem;
+}
+.state__msg {
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  max-width: 32ch;
+}
+.btn {
+  appearance: none;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--paper);
+  background: var(--ink);
+  border: 0;
+  border-radius: 999px;
+  padding: 0.55rem 1.3rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.btn:hover {
+  background: var(--accent-ink);
+  transform: translateY(-1px);
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--paper-2) 25%,
+    rgba(255, 255, 255, 0.5) 50%,
+    var(--paper-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.3s linear infinite;
+  border-radius: var(--radius);
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ---------- Footer ---------- */
+.colophon {
+  margin-top: clamp(3rem, 7vw, 5rem);
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.74rem;
+  color: var(--ink-soft);
+}
+.colophon a {
+  font-weight: 600;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 720px) {
+  .now {
+    grid-template-columns: 1fr;
+  }
+  .forecast {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Narrow viewports: the masthead meta drops below the nameplate, so align
+   the language switcher and date flush-left rather than indented-right.
+   Breakpoint matches the natural reflow point of the masthead. */
+@media (max-width: 630px) {
+  .masthead {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .masthead__meta {
+    width: 100%;
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+
+/* ---------- Masthead controls (lang + theme) ---------- */
+.masthead__controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* ============================================================
+   DARK THEME — "the Observatory at night"
+   Midnight-ink ground, warm off-white type, an inverted
+   atmosphere: cool teal aurora overhead, faint ember horizon.
+   ============================================================ */
+:root[data-theme="dark"] {
+  --paper: #10141c;
+  --paper-2: #171c26;
+  --ink: #e9e3d6;
+  --ink-soft: #a6adb8;
+  --ink-faint: #6f7884;
+  --rule: rgba(233, 227, 214, 0.14);
+  --rule-strong: rgba(233, 227, 214, 0.36);
+  --card: #171c26;
+  --card-edge: rgba(233, 227, 214, 0.1);
+
+  --sky-hi: #15363c;
+  --sky-lo: #2a2230;
+
+  --accent: #34b9af;
+  --accent-ink: #79d8cf;
+  --ember: #e0763f;
+
+  --sig-amber: #e8b62e;
+  --sig-red: #ef5350;
+  --sig-black: #e9e3d6;
+}
+
+[data-theme="dark"] body {
+  background-image:
+    radial-gradient(
+      120% 80% at 78% -10%,
+      rgba(33, 110, 110, 0.42) 0%,
+      rgba(33, 110, 110, 0) 55%
+    ),
+    radial-gradient(
+      90% 60% at 0% 110%,
+      rgba(140, 78, 52, 0.3) 0%,
+      rgba(140, 78, 52, 0) 60%
+    );
+}
+/* On dark, grain reads as faint light specks rather than ink. */
+[data-theme="dark"] body::before {
+  mix-blend-mode: screen;
+  opacity: 0.18;
+}
+[data-theme="dark"] .select select {
+  background: rgba(23, 28, 38, 0.6);
+}
+[data-theme="dark"] .day:hover {
+  background: #1f2531;
+}
+[data-theme="dark"] .warning--black {
+  background: rgba(233, 227, 214, 0.1);
+}
+[data-theme="dark"] .skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--paper-2) 25%,
+    rgba(233, 227, 214, 0.08) 50%,
+    var(--paper-2) 75%
+  );
+}
